@@ -1,0 +1,145 @@
+ (function () {
+  if (cc && cc.loader) {
+  cc.loader.releaseAll();
+  }
+  cc.sys.garbageCollect();
+  if (cc && cc.sys.isNative) {
+
+  
+  var gamePath = cc.sys.localStorage.getItem('gamePath');
+  if (gamePath) {
+  cc.Game_Path =   gamePath;
+  }
+  else {
+  cc.Game_Path = '';
+  }
+  }
+  else {
+  console.log('[main.js] 不是native平台!');
+  }
+  if (!cc.Game_Path) {
+  //主界面及单独游戏资源的路径
+  console.log('主界面');
+  cc.Game_Path = '';
+  }
+  else {
+  console.log('单独游戏:' + cc.Game_Path);
+  }
+  
+  
+  function boot() {
+  
+  
+  var settings = window._CCSettings;
+  window._CCSettings = undefined;
+  
+  if (!settings.debug) {
+  var uuids = settings.uuids;
+  
+  var rawAssets = settings.rawAssets;
+  var assetTypes = settings.assetTypes;
+  var realRawAssets = settings.rawAssets = {};
+  for (var mount in rawAssets) {
+  var entries = rawAssets[mount];
+  var realEntries = realRawAssets[mount] = {};
+  for (var id in entries) {
+  var entry = entries[id];
+  var type = entry[1];
+  // retrieve minified raw asset
+  if (typeof type === 'number') {
+  entry[1] = assetTypes[type];
+  }
+  // retrieve uuid
+  realEntries[uuids[id] || id] = entry;
+  }
+  }
+  
+  var scenes = settings.scenes;
+  for (var i = 0; i < scenes.length; ++i) {
+  var scene = scenes[i];
+  if (typeof scene.uuid === 'number') {
+  scene.uuid = uuids[scene.uuid];
+  }
+  }
+  
+  var packedAssets = settings.packedAssets;
+  for (var packId in packedAssets) {
+  var packedIds = packedAssets[packId];
+  for (var j = 0; j < packedIds.length; ++j) {
+  if (typeof packedIds[j] === 'number') {
+  packedIds[j] = uuids[packedIds[j]];
+  }
+  }
+  }
+  }
+  
+  // init engine
+  var onStart = function () {
+  cc.view.resizeWithBrowserSize(true);
+  
+  if (!false && !false) {
+  // UC browser on many android devices have performance issue with retina display
+  if (cc.sys.os !== cc.sys.OS_ANDROID || cc.sys.browserType !== cc.sys.BROWSER_TYPE_UC) {
+  cc.view.enableRetina(true);
+  }
+  }
+  
+  // init assets
+  cc.AssetLibrary.init({
+                       libraryPath: cc.Game_Path + 'res/import',
+                       rawAssetsBase: cc.Game_Path + 'res/raw-',
+                       rawAssets: settings.rawAssets,
+                       packedAssets: settings.packedAssets,
+                       md5AssetsMap: settings.md5AssetsMap
+                       });
+  
+  var launchScene = settings.launchScene;
+  
+  // load scene
+  cc.director.loadScene(launchScene, null,
+                        function () {
+                        cc.loader.onProgress = null;
+                        console.log('Success to load scene: ' + launchScene);
+                        }
+                        );
+  };
+  
+  // jsList
+  var jsList = settings.jsList;
+  {
+  var bundledScript = settings.debug ? cc.Game_Path + 'src/project.dev.js' : cc.Game_Path + 'src/project.js';
+  if (jsList) {
+  jsList = jsList.map(function (x) {
+                      return cc.Game_Path + 'src/' + x;
+                      });
+  jsList.push(bundledScript);
+  }
+  else {
+  jsList = [bundledScript];
+  }
+  }
+  
+  var option = {
+  //width: width,
+  //height: height,
+  id: 'GameCanvas',
+  scenes: settings.scenes,
+  debugMode: settings.debug ? cc.DebugMode.INFO : cc.DebugMode.ERROR,
+  showFPS: (!false && !false) && settings.debug,
+  frameRate: 60,
+  jsList: jsList,
+  groupList: settings.groupList,
+  collisionMatrix: settings.collisionMatrix,
+  renderMode: 0
+  }
+  
+  cc.game.run(option, onStart);
+  }
+  
+  if (window.jsb) {
+  require(cc.Game_Path + 'src/settings.js');
+  require(cc.Game_Path + 'src/jsb_polyfill.js');
+  boot();
+  return;
+  }
+  })();
